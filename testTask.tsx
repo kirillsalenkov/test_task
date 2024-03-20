@@ -3,9 +3,8 @@
 // Желательно использование React.memo и React.useCallback там где это имеет смысл.
 // Будет большим плюсом, если Вы сможете закэшировать получение случайного пользователя.
 // Укажите правильные типы.
-// По возможности пришлите Ваш вариант в https://codesandbox.io
 
-import React, { useState } from "react";
+import React, { memo, useCallback, useState } from "react";
 
 const URL = "https://jsonplaceholder.typicode.com/users";
 
@@ -28,15 +27,18 @@ type User = {
 
 interface IButtonProps {
   onClick: any;
+  children: React.ReactNode;
 }
 
-function Button({ onClick }: IButtonProps): JSX.Element {
+function Button({ onClick, children }: IButtonProps): JSX.Element {
   return (
     <button type="button" onClick={onClick}>
-      get random user
+      {children}
     </button>
   );
 }
+
+const ButtonMemo = memo(Button);
 
 interface IUserInfoProps {
   user: User;
@@ -62,7 +64,9 @@ function UserInfo({ user }: IUserInfoProps): JSX.Element {
 }
 
 function App(): JSX.Element {
-  const [item, setItem] = useState<Record<number, User>>(null);
+  const [item, setItem] = useState<Record<number, User>>();
+
+  const [counter, setCounter] = useState(0);
 
   const receiveRandomUser = async () => {
     const id = Math.floor(Math.random() * (10 - 1)) + 1;
@@ -71,17 +75,28 @@ function App(): JSX.Element {
     setItem(_user);
   };
 
-  const handleButtonClick = (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    event.stopPropagation();
-    receiveRandomUser();
-  };
+  const handleButtonClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      event.stopPropagation();
+
+      if (counter >= 10) {
+        return;
+      }
+
+      receiveRandomUser();
+      setCounter(counter + 1);
+    },
+    []
+  );
 
   return (
     <div>
-      <header>Get a random user</header>
-      <Button onClick={handleButtonClick} />
+      <header>Get a random user. Api request used {counter} from 10</header>
+
+      <ButtonMemo onClick={handleButtonClick}>
+        <span>get random user</span>
+      </ButtonMemo>
+
       <UserInfo user={item} />
     </div>
   );
